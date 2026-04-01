@@ -24,7 +24,7 @@ RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o wordgame .
 FROM alpine:3.19
 
 # Install runtime dependencies
-RUN apk add --no-cache ca-certificates sqlite-libs tzdata
+RUN apk add --no-cache ca-certificates sqlite-libs tzdata curl
 
 # Create non-root user
 RUN addgroup -g 1000 appuser && adduser -D -u 1000 -G appuser appuser
@@ -32,10 +32,10 @@ RUN addgroup -g 1000 appuser && adduser -D -u 1000 -G appuser appuser
 WORKDIR /app
 
 # Copy binary from builder
-COPY --from=builder /build/wordgame /app/
+COPY --from=builder /build/wordgame /app/wordgame
 
 # Create data directory for SQLite database (mounted as volume)
-RUN mkdir -p /app/data && chown -R appuser:appuser /app
+RUN chmod +x /app/wordgame && mkdir -p /app/data && chown -R appuser:appuser /app
 
 USER appuser
 
@@ -44,7 +44,7 @@ EXPOSE 8080
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/healthz || exit 1
+  CMD curl -f http://localhost:8080/healthz || exit 1
 
 # Environment variables
 ENV ADDR=:8080
